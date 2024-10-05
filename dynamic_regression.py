@@ -170,6 +170,8 @@ def main():
         plt.subplot(2, 1, 1)
         plt.plot(time_values[start_idx::step], tau_mes_all[i::num_joints][start_idx::step], label='Measured Torque')
         plt.plot(time_values[start_idx::step], tau_pred_all[i::num_joints][start_idx::step], label='Predicted Torque')
+        plt.text(0.05, 0.95, f'R-squared: {r2:.6f} Adjusted R - squared: {adjusted_r2: .6f} F - statistic: {f_stat: .6f} MSE: {mse: .6f}',
+                 transform=plt.gca().transAxes, fontsize=12, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
         plt.title(f'Joint {i + 1} Torque', fontsize=16)
         plt.xlabel('Time [s]', fontsize=14)
         plt.ylabel('Torque [Nm]', fontsize=14)
@@ -190,7 +192,6 @@ def main():
 
         plt.savefig("noise=0.1_" + f"Joint_{i + 1}.png")
         plt.show()
-
 
 
 if __name__ == '__main__':
