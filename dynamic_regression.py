@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference
 from scipy import stats
-
+import statsmodels.api as sm
 
 
 def compute_adjusted_r_squared(y_true, y_pred, p):
@@ -21,31 +21,16 @@ def compute_f_statistic(y_true, y_pred, p):
     return f_stat
 
 
-def compute_confidence_intervals(a, regressor_all, tau_mes_all, confidence=0.95):
-    n, p = regressor_all.shape
-    y_pred_all = regressor_all @ a
+def compute_confidence_intervals_ols(regressor_all, tau_mes_all, confidence=0.95):
+    # Fit OLS model
+    ols_model = sm.OLS(tau_mes_all, regressor_all).fit()
 
-    # Residuals
-    residuals = tau_mes_all - y_pred_all
-    residual_sum_of_squares = np.sum(residuals ** 2)
+    # Get confidence intervals for the parameters
+    ci_params = ols_model.conf_int(alpha=1 - confidence)
 
-    # Estimate variance of the residuals
-    s2 = residual_sum_of_squares / (n - p)
-
-    # Compute standard errors of the parameters
-    cov_matrix = np.linalg.inv(regressor_all.T @ regressor_all) * s2
-    se = np.sqrt(np.diag(cov_matrix))
-
-    # Compute t-critical value for confidence level
-    t_critical = stats.t.ppf((1 + confidence) / 2, df=n - p)
-
-    # Confidence intervals for the parameters
-    ci_params = np.array([a - t_critical * se, a + t_critical * se]).T
-
-    # Compute confidence intervals for predictions
-    pred_var = np.diag(regressor_all @ cov_matrix @ regressor_all.T)
-    se_pred = np.sqrt(pred_var)
-    ci_pred = np.array([y_pred_all - t_critical * se_pred, y_pred_all + t_critical * se_pred]).T
+    # Get predicted values and confidence intervals for predictions
+    predictions = ols_model.get_prediction(regressor_all)
+    ci_pred = predictions.conf_int(alpha=1 - confidence)
 
     return ci_params, ci_pred
 
@@ -152,13 +137,12 @@ def main():
     mse = np.mean((tau_mes_all - tau_pred_all) ** 2)
     print(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}")
 
-    # Compute confidence intervals for parameters and predictions
-    ci_params, ci_pred = compute_confidence_intervals(a, regressor_all, tau_mes_all)
+    # Compute confidence intervals for parameters and predictions using OLS model
+    ci_params, ci_pred = compute_confidence_intervals_ols(regressor_all, tau_mes_all)
     # Print confidence intervals for parameters
-    print(ci_pred, ci_params)
-    # print("Confidence intervals for parameters:")
-    # for i, ci in enumerate(ci_params):
-    #     print(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}")
+    print("Confidence intervals for parameters:")
+    for i, ci in enumerate(ci_params):
+        print(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}")
 
     # TODO plot the  torque prediction error for each joint (optional)
     # Plot the torque prediction error for each joint
@@ -168,10 +152,10 @@ def main():
     start_idx = 250
 
     for i in range(num_joints):
-
         print(f"Joint {i + 1}")
         # Compute Adjusted R-squared
-        r2, adjusted_r2 = compute_adjusted_r_squared(tau_mes_all[i::num_joints], tau_pred_all[i::num_joints], len(a[i::num_joints]))
+        r2, adjusted_r2 = compute_adjusted_r_squared(tau_mes_all[i::num_joints], tau_pred_all[i::num_joints],
+                                                     len(a[i::num_joints]))
         print(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}")
 
         # Compute F-statistics
@@ -193,7 +177,9 @@ def main():
         plt.legend(fontsize=14)
 
         plt.subplot(2, 1, 2)
-        plt.plot(time_values[start_idx::step], tau_pred_all[i::num_joints][start_idx::step] - tau_mes_all[i::num_joints][start_idx::step], label="prediction error")
+        plt.plot(time_values[start_idx::step],
+                 tau_pred_all[i::num_joints][start_idx::step] - tau_mes_all[i::num_joints][start_idx::step],
+                 label="prediction error")
         plt.title(f'Prediction Error (pre - mes) of Joint {i + 1}', fontsize=16)
         plt.xlabel('Time [s]', fontsize=14)
         plt.ylabel('Error [Nm]', fontsize=14)
