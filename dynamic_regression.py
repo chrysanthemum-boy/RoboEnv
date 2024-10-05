@@ -70,7 +70,7 @@ def main():
     # Simulation parameters
     time_step = sim.GetTimeStep()
     current_time = 0
-    max_time = 2  # seconds
+    max_time = 20  # seconds
 
     # Command and control loop
     cmd = MotorCommands()  # Initialize command structure for motors
@@ -121,8 +121,8 @@ def main():
 
     # TODO After data collection, stack all the regressor and all the torquen and compute the parameters 'a'  using pseudoinverse
     # Stack all the regressor data and torque measurements
-    regressor_all = np.vstack(regressor_all[1::])
-    tau_mes_all = np.hstack(tau_mes_all[1::])
+    regressor_all = np.vstack(regressor_all[::])
+    tau_mes_all = np.hstack(tau_mes_all[::])
     print(regressor_all.shape, tau_mes_all.shape)
 
     # Compute dynamic parameters using pseudoinverse
@@ -148,7 +148,7 @@ def main():
     # Plot the torque prediction error for each joint
     time_values = np.linspace(0, max_time, len(tau_mes_all) // num_joints)
 
-    step = 5
+    step = 50
     start_idx = 250
 
     for i in range(num_joints):
@@ -188,7 +188,9 @@ def main():
 
         plt.subplots_adjust(hspace=0.3)
 
+        plt.savefig("noise=0.1_" + f"Joint_{i + 1}.png")
         plt.show()
+
 
 
 if __name__ == '__main__':
