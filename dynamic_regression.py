@@ -82,6 +82,12 @@ def main():
     tau_mes_all = []
     regressor_all = []
 
+    # 定义文件路径
+    file_path = 'noise=0.001_regression_parameters.txt'
+
+    # 将内容写入文件
+
+
     # Data collection loop
     while current_time < max_time:
         # Measure current state
@@ -117,34 +123,46 @@ def main():
 
         current_time += time_step
         # Optional: print current time
-        print(f"Current time in seconds: {current_time:.2f}")
+        # print(f"Current time in seconds: {current_time:.2f}")
 
     # TODO After data collection, stack all the regressor and all the torquen and compute the parameters 'a'  using pseudoinverse
     # Stack all the regressor data and torque measurements
     regressor_all = np.vstack(regressor_all[::])
     tau_mes_all = np.hstack(tau_mes_all[::])
-    print(regressor_all.shape, tau_mes_all.shape)
 
     # Compute dynamic parameters using pseudoinverse
     a = np.linalg.pinv(regressor_all) @ tau_mes_all
-    print(f"Dynamic parameters: {a}")
-    print(a.shape)
 
     # Compute predicted torques using the learned parameters 'a'
     tau_pred_all = regressor_all @ a
 
     # TODO compute the metrics for the linear model
-    mse = np.mean((tau_mes_all - tau_pred_all) ** 2)
-    print(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}")
+    with open(file_path, 'w') as file:
+        mse = np.mean((tau_mes_all - tau_pred_all) ** 2)
+        # print(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}")
+        file.write(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}\n")
+        # Compute Adjusted R-squared
+        r2, adjusted_r2 = compute_adjusted_r_squared(tau_mes_all, tau_pred_all,len(a))
+        # print(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}")
+        file.write(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}\n")
+        # Compute F-statistics
+        f_stat = compute_f_statistic(tau_mes_all, tau_pred_all, len(a))
+        # print(f"F-statistic: {f_stat:.6f}")
+        file.write(f"F-statistic: {f_stat:.6f}\n")
+        # Compute confidence intervals for parameters and predictions using OLS model
+        ci_params, ci_pred = compute_confidence_intervals_ols(regressor_all, tau_mes_all)
+        # Print confidence intervals for parameters
+        # print("Confidence intervals for parameters:")
+        file.write("Confidence intervals for parameters:\n")
+        for i, ci in enumerate(ci_params):
+            # print(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}")
+            file.write(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}\n")
+        file.write("\nConfidence intervals for prediction:\n")
+        for i, ci in enumerate(ci_pred):
+            # print(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}")
+            file.write(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}\n")
 
-    # Compute confidence intervals for parameters and predictions using OLS model
-    ci_params, ci_pred = compute_confidence_intervals_ols(regressor_all, tau_mes_all)
-    # Print confidence intervals for parameters
-    print("Confidence intervals for parameters:")
-    for i, ci in enumerate(ci_params):
-        print(f"Parameter {i + 1}: {ci[0]:.6f} to {ci[1]:.6f}")
-
-    # TODO plot the  torque prediction error for each joint (optional)
+    # TODO plot the torque prediction error for each joint (optional)
     # Plot the torque prediction error for each joint
     time_values = np.linspace(0, max_time, len(tau_mes_all) // num_joints)
 
@@ -156,27 +174,27 @@ def main():
         # Compute Adjusted R-squared
         r2, adjusted_r2 = compute_adjusted_r_squared(tau_mes_all[i::num_joints], tau_pred_all[i::num_joints],
                                                      len(a[i::num_joints]))
-        print(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}")
+        # print(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}")
 
         # Compute F-statistics
         f_stat = compute_f_statistic(tau_mes_all[i::num_joints], tau_pred_all[i::num_joints], len(a[i::num_joints]))
-        print(f"F-statistic: {f_stat:.6f}")
+        # print(f"F-statistic: {f_stat:.6f}")
 
         # Compute the mean squared error for each joint
         mse = np.mean((tau_mes_all[i::num_joints] - tau_pred_all[i::num_joints]) ** 2)
-        print(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}")
+        # print(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}")
 
         plt.figure(figsize=(10, 10))
         plt.subplot(2, 1, 1)
         plt.plot(time_values[start_idx::step], tau_mes_all[i::num_joints][start_idx::step], label='Measured Torque')
         plt.plot(time_values[start_idx::step], tau_pred_all[i::num_joints][start_idx::step], label='Predicted Torque')
-        plt.text(0.05, 0.95, f'R-squared: {r2:.6f} Adjusted R - squared: {adjusted_r2: .6f} F - statistic: {f_stat: .6f} MSE: {mse: .6f}',
+        plt.text(0.05, 0.95, f'R-squared={r2:.6f}\nAdjusted-R-squared={adjusted_r2:.6f}\nF-statistic={f_stat:.6f}\nMSE={mse:.6f}',
                  transform=plt.gca().transAxes, fontsize=12, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
         plt.title(f'Joint {i + 1} Torque', fontsize=16)
         plt.xlabel('Time [s]', fontsize=14)
         plt.ylabel('Torque [Nm]', fontsize=14)
         plt.grid(True)
-        plt.legend(fontsize=14)
+        plt.legend(fontsize=14, loc='upper right')
 
         plt.subplot(2, 1, 2)
         plt.plot(time_values[start_idx::step],
@@ -186,11 +204,11 @@ def main():
         plt.xlabel('Time [s]', fontsize=14)
         plt.ylabel('Error [Nm]', fontsize=14)
         plt.grid(True)
-        plt.legend(fontsize=14)
+        plt.legend(fontsize=14, loc='upper right')
 
         plt.subplots_adjust(hspace=0.3)
 
-        plt.savefig("noise=0.1_" + f"Joint_{i + 1}.png")
+        plt.savefig("noise=0.001_" + f"Joint_{i + 1}.png", dpi=300)
         plt.show()
 
 
