@@ -2,6 +2,8 @@ import os
 import numpy as np
 from numpy.fft import fft, fftfreq
 import time
+import matplotlib
+matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, \
     CartesianDiffKin
@@ -27,7 +29,7 @@ print(f"Initial joint angles: {init_joint_angles}")
 
 
 # single joint tuning
-#episode_duration is specified in seconds
+# episode_duration is specified in seconds
 def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=0.1, episode_duration=10, plot=False):
     # here we reset the simulator each time we start a new test
     sim_.ResetPose()
@@ -71,20 +73,20 @@ def simulate_with_given_pid_values(sim_, kp, joints_id, regulation_displacement=
         if qKey in keys and keys[qKey] and sim_.GetPyBulletClient().KEY_WAS_TRIGGERED:
             break
 
-        #simulation_time = sim.GetTimeSinceReset()
+        # simulation_time = sim.GetTimeSinceReset()
 
         # Store data for plotting
         q_mes_all.append(q_mes)
         qd_mes_all.append(qd_mes)
         q_d_all.append(q_des)
         qd_d_all.append(qd_des)
-        #cur_regressor = dyn_model.ComputeDyanmicRegressor(q_mes,qd_mes, qdd_est)
-        #regressor_all = np.vstack((regressor_all, cur_regressor))
+        # cur_regressor = dyn_model.ComputeDyanmicRegressor(q_mes,qd_mes, qdd_est)
+        # regressor_all = np.vstack((regressor_all, cur_regressor))
 
-        #time.sleep(0.01)  # Slow down the loop for better visualization
+        # time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time
         current_time += time_step
-        #print("current time in seconds",current_time)
+        # print("current time in seconds",current_time)
 
     # TODO make the plot for the current joint
     if plot:
@@ -133,18 +135,19 @@ def perform_frequency_analysis(data, dt):
 # [16.625, 17, 9, 2.5]
 
 if __name__ == '__main__':
-    joint_id = 4  # Joint ID to tune
+    joint_id = 1  # Joint ID to tune
     regulation_displacement = 0.1  # Displacement from the initial joint position
-    init_gain = 1
-    gain_step = 0.5
-    max_gain = 10
+    init_gain = 15.709999999999942  # Kp
+    gain_step = 1.5
+    max_gain = 1000  # Ku
     test_duration = 10  # in seconds
-
-    while init_gain < max_gain:
-        print(f"Initial gain: {init_gain}")
-        simulate_with_given_pid_values(sim, init_gain, joint_id, regulation_displacement,test_duration,True)
-        init_gain += gain_step
-        time.sleep(1)
+    q_mes_all = simulate_with_given_pid_values(sim, init_gain, joint_id, regulation_displacement, test_duration, True)
+    # print(len(q_mes_all[0]))
+    # while init_gain < max_gain:
+    #     print(f"Initial gain: {init_gain}")
+    #     simulate_with_given_pid_values(sim, init_gain, joint_id, regulation_displacement, test_duration, True)
+    #     time.sleep(11)
+    #     init_gain += gain_step
     # TODO using simulate_with_given_pid_values() and perform_frequency_analysis() write you code to test different Kp values 
     # for each joint, bring the system to oscillation and compute the the PD parameters using the Ziegler-Nichols method
     # simulate_with_given_pid_values(sim, init_gain, joint_id, regulation_displacement,test_duration,True)
