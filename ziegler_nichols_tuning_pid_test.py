@@ -176,10 +176,6 @@ def calculate(joint_id, init_gain, max_gain, gain_step, regulation_displacement,
         bol, cal = is_sustained_oscillation(data)
         if bol:
             res.append(cal)
-
-
-            # plt.show()
-
             Ku = current_gain  # current_gain
             dominant_frequency, power = perform_frequency_analysis(data, dt, False)
             Tu = 1 / dominant_frequency  # dominant_frequency
