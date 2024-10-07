@@ -3,10 +3,12 @@ import numpy as np
 from numpy.fft import fft, fftfreq
 import time
 import matplotlib
+
 matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 from simulation_and_control import pb, MotorCommands, PinWrapper, feedback_lin_ctrl, SinusoidalReference, \
     CartesianDiffKin
+from scipy.signal import find_peaks
 
 # Configuration for the simulation
 conf_file_name = "pandaconfig.json"  # Configuration file for the robot
@@ -134,14 +136,95 @@ def perform_frequency_analysis(data, dt):
 # TODO Implement the table in thi function
 # [16.625, 17, 9, 2.5]
 
+def cal_amplitudes_num(data):
+    # 找到波峰和波谷
+    peaks, _ = find_peaks(data)  # 找到波峰
+    troughs, _ = find_peaks(-data)  # 找到波谷
+
+    # 确保波峰和波谷的数量一致，匹配对应的周期
+    min_length = min(len(peaks), len(troughs))
+    peaks = peaks[:min_length]
+    troughs = troughs[:min_length]
+
+    # 计算每个周期的振幅
+    amplitudes = data[peaks] - data[troughs]  # 每个周期的振幅是波峰减去波谷
+    num = 0
+    if amplitudes > 0.19:
+        num += 1
+
+
+# --- 步骤1：找到波峰和波谷 ---
+
+def find_cycles(data):
+    # 找到波峰和波谷
+    peaks, _ = find_peaks(data)
+    troughs, _ = find_peaks(-data)
+
+    # 确保波峰和波谷是交替出现的
+    cycle_indices = np.sort(np.concatenate([peaks, troughs]))
+
+    return cycle_indices
+
+
+# --- 步骤2：计算每个周期的振幅 ---
+
+def calculate_amplitudes(data, cycle_indices):
+    amplitudes = []
+    for i in range(1, len(cycle_indices)):
+        cycle_data = data[cycle_indices[i - 1]:cycle_indices[i]]  # 提取一个周期的数据
+        amplitude = np.max(cycle_data) - np.min(cycle_data)  # 振幅 = 最大值 - 最小值
+        amplitudes.append(amplitude)
+    return np.array(amplitudes)
+
+
+# --- 步骤3：检查振幅是否稳定 ---
+
+def is_amplitude_stable(amplitudes, tolerance):
+    # 振幅的标准差与平均值之比来衡量振幅变化
+    mean_amplitude = np.mean(amplitudes)
+    std_amplitude = np.std(amplitudes)
+
+    # 如果标准差相对于平均振幅的比例小于容忍度 tolerance，则认为振幅稳定
+    return (std_amplitude / mean_amplitude) < tolerance
+
+
+# --- 运行分析 ---
+def is_chixu(data):
+    # 找到周期的起点和终点（波峰和波谷）
+    cycle_indices = find_cycles(data)
+
+    # 计算每个周期的振幅
+    amplitudes = calculate_amplitudes(data, cycle_indices)
+
+    # 检查振幅是否稳定
+    tolerance = 0.05  # 设定容忍度，表示允许的振幅变化比例
+    if is_amplitude_stable(amplitudes, tolerance):
+        print("振幅在多个周期内是稳定的。")
+    else:
+        print("振幅在多个周期内不稳定。")
+
+    # 输出每个周期的振幅
+    print("每个周期的振幅:", amplitudes)
+
+
 if __name__ == '__main__':
-    joint_id = 1  # Joint ID to tune
+    joint_id = 4  # Joint ID to tune
     regulation_displacement = 0.1  # Displacement from the initial joint position
-    init_gain = 15.709999999999942  # Kp
+    init_gain = 16.5  # Kp
     gain_step = 1.5
     max_gain = 1000  # Ku
     test_duration = 10  # in seconds
     q_mes_all = simulate_with_given_pid_values(sim, init_gain, joint_id, regulation_displacement, test_duration, True)
+
+    data = np.array([q[joint_id] for q in q_mes_all[::]])
+
+    data_max = max([q[joint_id] for q in q_mes_all[::]])
+    data_min = min([q[joint_id] for q in q_mes_all[::]])
+    print((data_max - data_min) / 2)
+    data_std = np.std([q[joint_id] for q in q_mes_all[::]])
+    print(data_std)
+    is_chixu(data)
+    # 0.0698
     # print(len(q_mes_all[0]))
     # while init_gain < max_gain:
     #     print(f"Initial gain: {init_gain}")
