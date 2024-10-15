@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="$USER_HOME$/.local/share/mamba/envs/roboenv2" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.10 (roboenv2)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="$USER_HOME$/.local/share/mamba/envs/roboenv2" project-jdk-type="Python SDK" />
 </project>

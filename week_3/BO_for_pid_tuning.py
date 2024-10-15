@@ -121,7 +121,7 @@ def objective(params):
     # TODO Collect data for the first kp and kd  
     kp0_values.append(kp[0])
     kd0_values.append(kd[0])
-    print(kp[0])
+    # print(kp[0])
     return tracking_error
 
 
@@ -151,7 +151,7 @@ def main():
         space,
         n_calls=10,
         base_estimator=gp,  # Use the custom Gaussian Process Regressor
-        acq_func='PI',
+        acq_func='EI',
         # TODO change this LCB': Lower Confidence Bound 'EI': Expected Improvement 'PI': Probability of Improvement
         random_state=42)
 
