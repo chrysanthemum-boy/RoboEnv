@@ -7,16 +7,23 @@ from scipy import stats
 import statsmodels.api as sm
 
 
+def compute_r_squared(y_true, y_pred):
+    rss = np.sum((y_true - y_pred) ** 2)
+    tss = np.sum((y_true - np.mean(y_true)) ** 2)
+    r2 = 1 - rss / tss
+    return r2
+
+
 def compute_adjusted_r_squared(y_true, y_pred, p):
     n = len(y_true)
-    r2 = 1 - np.sum((y_true - y_pred) ** 2) / np.sum((y_true - np.mean(y_true)) ** 2)
+    r2 = compute_r_squared(y_true, y_pred)
     adjusted_r2 = 1 - ((1 - r2) * (n - 1) / (n - p - 1))
-    return r2, adjusted_r2
+    return adjusted_r2
 
 
 def compute_f_statistic(y_true, y_pred, p):
     n = len(y_true)
-    r2 = 1 - np.sum((y_true - y_pred) ** 2) / np.sum((y_true - np.mean(y_true)) ** 2)
+    r2 = compute_r_squared(y_true, y_pred)
     f_stat = (r2 / p) / ((1 - r2) / (n - p - 1))
     return f_stat
 
@@ -142,7 +149,8 @@ def main():
         # print(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}")
         file.write(f"Mean Squared Error (MSE) on torque prediction: {mse:.6f}\n")
         # Compute Adjusted R-squared
-        r2, adjusted_r2 = compute_adjusted_r_squared(tau_mes_all, tau_pred_all,len(a))
+        r2 = compute_r_squared(tau_mes_all, tau_pred_all)
+        adjusted_r2 = compute_adjusted_r_squared(tau_mes_all, tau_pred_all,len(a))
         # print(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}")
         file.write(f"R-squared: {r2:.6f}, Adjusted R-squared: {adjusted_r2:.6f}\n")
         # Compute F-statistics
