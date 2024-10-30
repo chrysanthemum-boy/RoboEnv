@@ -89,9 +89,14 @@ def getCostMatrices(num_joints):
     num_controls = num_joints
     
     # Q = 1 * np.eye(num_states)  # State cost matrix
-    Q = 10000 * np.eye(num_states)
-    #Q[num_joints:, num_joints:] = 0.0
+    p_w = 1000
+    v_w = 1
+    Q_diag = np.array([p_w, p_w, p_w,p_w, p_w, p_w,p_w, v_w, v_w, v_w,v_w, v_w, v_w,v_w])
+    # Q_diag = np.array([p_w, p_w, p_w,p_w, p_w, p_w,p_w])
+    Q = np.diag(Q_diag)
     
+    print(Q)
+
     R = 0.1 * np.eye(num_controls)  # Control input cost matrix
     
     return Q, R
@@ -120,6 +125,7 @@ def main():
     # Measuring all the state
     num_states = 2 * num_joints
     C = np.eye(num_states)
+    # C = np.hstack([np.eye(num_joints), np.zeros((num_joints, num_joints))])
     
     # Horizon length
     N_mpc = 10
@@ -178,7 +184,8 @@ def main():
         u_mpc += u_star[:num_joints]
        
         # Control command
-        cmd.tau_cmd = dyn_cancel(dyn_model, q_mes, qd_mes, u_mpc)
+        tau_cmd = dyn_cancel(dyn_model, q_mes, qd_mes, u_mpc)
+        cmd.SetControlCmd(tau_cmd, ["torque"]*7)
         sim.Step(cmd, "torque")  # Simulation step with torque command
 
         # print(cmd.tau_cmd)
@@ -202,7 +209,7 @@ def main():
         # time.sleep(0.01)  # Slow down the loop for better visualization
         # get real time
         current_time += time_step
-        print(f"Time: {current_time}")
+        #print(f"Time: {current_time}")
     
     
     
@@ -228,7 +235,9 @@ def main():
         plt.ylabel('Velocity')
         plt.legend()
 
+
         plt.tight_layout()
+        plt.savefig(f'joint_{i+1}_tracking_1000_1.png', dpi=300)
         plt.show()
     
      
